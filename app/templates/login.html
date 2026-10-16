@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Log in - Biomed EMS{% endblock %}
+{% block content %}
+<div class="login-card">
+  <div class="card shadow-sm">
+    <div class="card-body p-4">
+      <h1 class="h4 mb-1">Log in</h1>
+      <p class="text-muted">Biomedical equipment management</p>
+      <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-3">
+          <label class="form-label" for="email">Email</label>
+          <input class="form-control" id="email" name="email" type="email" required autofocus>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="password">Password</label>
+          <input class="form-control" id="password" name="password" type="password" required>
+        </div>
+        <button class="btn btn-primary w-100" type="submit">Log in</button>
+      </form>
+    </div>
+  </div>
+
+  {% if config.DEMO_MODE %}
+  <div class="card mt-3 border-info">
+    <div class="card-body small">
+      <strong>Demo accounts</strong> (all use password <code>demo1234</code>)
+      <ul class="mb-0 mt-2">
+        <li><code>admin@example.com</code> sees every facility</li>
+        <li><code>officer.nairobi@example.com</code> sees one county</li>
+        <li><code>engineer.rcrh@example.com</code> sees one hospital</li>
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
