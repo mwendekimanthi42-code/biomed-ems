@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge %}
+{% block title %}Replacement budget - Biomed EMS{% endblock %}
+{% block content %}
+<nav class="mb-2 no-print"><a href="{{ url_for('reports.index') }}">&larr; Reports</a></nav>
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-0">Replacement budget planning</h1>
+    <div class="text-muted">{{ scope }} &middot; as at {{ today.strftime('%d %B %Y') }}</div>
+  </div>
+  <div class="d-flex gap-2 no-print">
+    <button class="btn btn-outline-secondary" onclick="window.print()">Print</button>
+    <a class="btn btn-primary" href="{{ url_for('reports.budget_csv') }}">Download full list (CSV)</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-6"><div class="card border-danger h-100"><div class="card-body">
+    <div class="small text-muted">Review now (past expected life or heavy repair spend)</div>
+    <div class="stat-number">{{ summary.review_now.cost|ksh }}</div>
+    <div>{{ summary.review_now.count|num }} devices</div>
+  </div></div></div>
+  <div class="col-md-6"><div class="card border-warning h-100"><div class="card-body">
+    <div class="small text-muted">Plan within 12 months (reaching expected life)</div>
+    <div class="stat-number">{{ summary.plan_12m.cost|ksh }}</div>
+    <div>{{ summary.plan_12m.count|num }} devices</div>
+  </div></div></div>
+</div>
+
+{% if summary.by_facility|length > 1 %}
+<div class="table-responsive mb-3">
+  <table class="table table-sm bg-white shadow-sm align-middle">
+    <thead class="table-light"><tr><th>Facility</th><th class="text-end">Review now</th><th class="text-end">Estimated cost</th><th class="text-end">Plan in 12 months</th><th class="text-end">Estimated cost</th></tr></thead>
+    <tbody>
+      {% for name, v in summary.by_facility.items() %}
+      <tr><td>{{ name }}</td><td class="text-end">{{ v.review_now }}</td><td class="text-end">{{ v.review_now_cost|ksh }}</td>
+          <td class="text-end">{{ v.plan_12m }}</td><td class="text-end">{{ v.plan_12m_cost|ksh }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+<h2 class="h5">Ranked devices <small class="text-muted">(top {{ candidates|length }} of {{ total }})</small></h2>
+<div class="table-responsive">
+  <table class="table table-sm align-middle bg-white shadow-sm">
+    <thead class="table-light"><tr><th class="text-end">Score</th><th>Device</th><th>Facility</th><th>Type</th><th>Status</th>
+      <th class="text-end">Age / life</th><th class="text-end">Repairs vs replacement</th><th class="text-end">Replacement cost</th><th>Timing</th></tr></thead>
+    <tbody>
+      {% for c in candidates %}
+      <tr>
+        <td class="text-end fw-bold">{{ c.score }}</td>
+        <td><a href="{{ url_for('equipment.detail', equipment_id=c.id) }}">{{ c.asset_tag }}</a></td>
+        <td>{{ c.facility }}</td><td>{{ c.type_name }}</td><td>{{ status_badge(c.status) }}</td>
+        <td class="text-end">{{ c.age if c.age is not none else '-' }} / {{ c.life }} y</td>
+        <td class="text-end">{{ c.repair_ratio }}%</td>
+        <td class="text-end">{{ c.replacement_cost|ksh }}</td>
+        <td>{{ 'Review now' if c.timing == 'review_now' else 'Plan in 12 months' }}</td>
+      </tr>
+      {% else %}<tr><td colspan="9" class="text-center text-muted py-3">No devices need a replacement decision.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card"><div class="card-body small text-muted">
+  <strong>How this is calculated.</strong>
+  <ul class="mb-0">
+    <li><strong>Review now</strong>: the device is older than the expected life of its type, <em>or</em> lifetime repair spend has reached {{ (review_ratio * 100)|int }}% of its estimated replacement cost.</li>
+    <li><strong>Plan within 12 months</strong>: the device will pass its expected life within a year and is not already in the group above.</li>
+    <li><strong>Priority score (0-100)</strong> = {{ weights.age }} x age (as a share of expected life, capped at 150%) + {{ weights.repair }} x repair spend (as a share of replacement cost, capped at 100%) + {{ weights.risk }} x risk (type risk score out of 5).</li>
+    <li>Replacement costs are <strong>estimates per equipment type</strong>, not quotations. Replace them with supplier quotes before using this for a real budget. The thresholds and weights are adjustable rules of thumb, not a standard.</li>
+  </ul>
+</div></div>
+{% endblock %}

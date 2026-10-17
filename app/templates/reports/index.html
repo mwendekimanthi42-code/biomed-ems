@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Reports - Biomed EMS{% endblock %}
+{% block content %}
+<h1 class="h3 mb-1">Reports</h1>
+<p class="text-muted">Scope: {{ scope }}. Each report can be printed or downloaded as a spreadsheet (CSV).</p>
+<div class="row g-3">
+  <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body">
+    <h2 class="h5">Maintenance audit</h2>
+    <p>How well each facility keeps its equipment working and maintained: functional rate, PPM compliance, downtime, and repair cost.</p>
+    <a class="btn btn-primary stretched-link" href="{{ url_for('reports.audit') }}">Open report</a>
+  </div></div></div>
+  <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body">
+    <h2 class="h5">Replacement budget</h2>
+    <p>Devices that need a replacement decision, ranked by priority, with the estimated cost to replace them.</p>
+    <a class="btn btn-primary stretched-link" href="{{ url_for('reports.budget') }}">Open report</a>
+  </div></div></div>
+  <div class="col-md-4"><div class="card shadow-sm h-100"><div class="card-body">
+    <h2 class="h5">Reliability</h2>
+    <p>How often each type of equipment fails and how long repairs take: MTBF, MTTR, and availability.</p>
+    <a class="btn btn-primary stretched-link" href="{{ url_for('reports.reliability') }}">Open report</a>
+  </div></div></div>
+</div>
+{% endblock %}

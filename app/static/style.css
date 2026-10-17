@@ -1,2 +1,10 @@
 .stat-number { font-size: 2.2rem; font-weight: 700; }
 .login-card { max-width: 440px; margin: 3rem auto; }
+.chart-box { position: relative; height: 280px; }
+.kpi-good { color: #198754; } .kpi-warn { color: #b58100; } .kpi-bad { color: #dc3545; }
+@media print {
+  nav.navbar, .no-print, .btn { display: none !important; }
+  body { background: #fff !important; }
+  .card { box-shadow: none !important; border: 1px solid #ccc !important; }
+  a { color: inherit !important; text-decoration: none !important; }
+}

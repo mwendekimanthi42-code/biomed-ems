@@ -1,27 +1,139 @@
 {% extends "base.html" %}
+{% from "_macros.html" import kpi, health_tone, priority_badge %}
 {% block title %}Dashboard - Biomed EMS{% endblock %}
 {% block content %}
-<h1 class="h3">Welcome, {{ g.user.full_name }}</h1>
-<p class="text-muted">You are viewing: <strong>{{ scope }}</strong></p>
+<div class="d-flex justify-content-between align-items-end flex-wrap mb-3">
+  <div>
+    <h1 class="h3 mb-0">Dashboard</h1>
+    <div class="text-muted">Welcome, {{ g.user.full_name }} &middot; {{ scope }}</div>
+  </div>
+</div>
 
-<div class="row g-3 mt-1">
-  <div class="col-md-4">
-    <div class="card shadow-sm"><div class="card-body">
-      <a class="stretched-link text-decoration-none text-muted" href="{{ url_for('equipment.index') }}">Equipment</a>
-      <div class="stat-number">{{ "{:,}".format(equipment) }}</div>
+<div class="row g-3 mb-3">
+  {{ kpi('Active equipment', o.active|num, o.decommissioned|num ~ ' decommissioned', url_for('equipment.index')) }}
+  {{ kpi('Functional', o.functional_pct|pct, o.non_functional|num ~ ' non-functional', url_for('equipment.index', status='non_functional'), health_tone(o.functional_pct)) }}
+  {{ kpi('PPM compliance', o.ppm_pct|pct, o.ppm_overdue|num ~ ' overdue', url_for('equipment.index', overdue=1), health_tone(o.ppm_pct)) }}
+  {{ kpi('Open work orders', o.open_jobs|num, o.urgent_jobs|num ~ ' high or critical', url_for('workorders.index', status='active')) }}
+  {{ kpi('Past expected life', o.past_life|num, 'review for replacement', url_for('equipment.index', eol=1), 'kpi-warn' if o.past_life else '') }}
+  {{ kpi('Facilities in view', facilities|length, scope) }}
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-lg-4">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <h2 class="h6 text-uppercase text-muted">Equipment status</h2>
+      <div class="chart-box"><canvas id="statusChart" role="img" aria-label="Equipment by status"></canvas></div>
     </div></div>
   </div>
-  <div class="col-md-4">
-    <div class="card shadow-sm"><div class="card-body">
-      <div class="text-muted">Facilities in view</div>
-      <div class="stat-number">{{ facilities }}</div>
-    </div></div>
-  </div>
-  <div class="col-md-4">
-    <div class="card shadow-sm"><div class="card-body">
-      <a class="stretched-link text-decoration-none text-muted" href="{{ url_for('workorders.index', status='active') }}">Open work orders</a>
-      <div class="stat-number">{{ "{:,}".format(open_jobs) }}</div>
+  <div class="col-lg-8">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <h2 class="h6 text-uppercase text-muted">Repairs: downtime and cost, last 12 months</h2>
+      <div class="chart-box"><canvas id="monthlyChart" role="img" aria-label="Repair downtime and cost by month"></canvas></div>
     </div></div>
   </div>
 </div>
+
+{% if facilities|length > 1 %}
+<div class="card shadow-sm mb-3"><div class="card-body">
+  <div class="d-flex justify-content-between align-items-center">
+    <h2 class="h6 text-uppercase text-muted mb-0">Facility comparison</h2>
+    {% if g.user.role in ['system_admin', 'county_officer'] %}
+    <a class="btn btn-sm btn-outline-primary" href="{{ url_for('reports.audit') }}">Full audit report</a>
+    {% endif %}
+  </div>
+  <div class="chart-box mt-2" style="height: {{ 90 + facilities|length * 46 }}px">
+    <canvas id="facilityChart" role="img" aria-label="PPM compliance and functional rate by facility"></canvas>
+  </div>
+  <div class="table-responsive mt-3">
+    <table class="table table-sm align-middle mb-0">
+      <thead class="table-light"><tr><th>Facility</th><th class="text-end">Devices</th><th class="text-end">Functional</th><th class="text-end">PPM compliance</th><th class="text-end">Open jobs</th><th class="text-end">Repair cost (12 mo)</th></tr></thead>
+      <tbody>
+        {% for f in facilities %}
+        <tr>
+          <td><a href="{{ url_for('equipment.index', facility=f.id) }}">{{ f.name }}</a></td>
+          <td class="text-end">{{ f.devices|num }}</td>
+          <td class="text-end {{ health_tone(f.functional_pct) }}">{{ f.functional_pct|pct }}</td>
+          <td class="text-end {{ health_tone(f.ppm_pct) }}">{{ f.ppm_pct|pct }}</td>
+          <td class="text-end">{{ f.open_jobs|num }}</td>
+          <td class="text-end">{{ f.cost|ksh }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div></div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <h2 class="h6 text-uppercase text-muted">Urgent open jobs</h2>
+      {% for w in urgent %}
+      <div class="d-flex justify-content-between border-bottom py-2">
+        <div><a href="{{ url_for('workorders.detail', wo_id=w.id) }}">#{{ w.id }} {{ w.asset_tag }}</a>
+          <div class="small text-muted">{{ w.description[:70] }} &middot; {{ w.facility }}</div></div>
+        <div>{{ priority_badge(w.priority) }}</div>
+      </div>
+      {% else %}<p class="text-muted mb-0">No high or critical jobs are open.</p>{% endfor %}
+    </div></div>
+  </div>
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <h2 class="h6 text-uppercase text-muted">Replacement priorities</h2>
+      {% for c in attention %}
+      <div class="d-flex justify-content-between border-bottom py-2">
+        <div><a href="{{ url_for('equipment.detail', equipment_id=c.id) }}">{{ c.asset_tag }}</a> {{ c.type_name }}
+          <div class="small text-muted">{{ c.facility }} &middot; {{ c.age if c.age is not none else '-' }} y of {{ c.life }} y &middot; repairs {{ c.repair_ratio }}% of replacement</div></div>
+        <div class="fw-bold">{{ c.score }}</div>
+      </div>
+      {% else %}<p class="text-muted mb-0">No devices need a replacement decision.</p>{% endfor %}
+      {% if g.user.role in ['system_admin', 'county_officer', 'facility_engineer'] %}
+      <a class="small" href="{{ url_for('reports.budget') }}">See the full replacement budget report</a>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+
+<script id="dash-data" type="application/json">{{ chart_data|tojson }}</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  if (!window.Chart) { return; }
+  const d = JSON.parse(document.getElementById('dash-data').textContent);
+  const colors = { good: '#198754', warn: '#ffc107', bad: '#dc3545', grey: '#6c757d', blue: '#0d6efd' };
+
+  new Chart(document.getElementById('statusChart'), {
+    type: 'doughnut',
+    data: { labels: d.status.labels, datasets: [{ data: d.status.values,
+            backgroundColor: [colors.good, colors.warn, colors.bad, colors.grey] }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+  });
+
+  new Chart(document.getElementById('monthlyChart'), {
+    data: { labels: d.monthly.labels, datasets: [
+      { type: 'bar', label: 'Downtime (hours)', data: d.monthly.downtime, backgroundColor: colors.blue, yAxisID: 'y' },
+      { type: 'line', label: 'Repair cost (KSh)', data: d.monthly.cost, borderColor: colors.bad,
+        backgroundColor: colors.bad, tension: 0.25, yAxisID: 'y1' } ] },
+    options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+      scales: { y: { title: { display: true, text: 'Hours' }, beginAtZero: true },
+                y1: { position: 'right', title: { display: true, text: 'KSh' }, beginAtZero: true,
+                      grid: { drawOnChartArea: false } } } }
+  });
+
+  const fac = document.getElementById('facilityChart');
+  if (fac) {
+    new Chart(fac, {
+      type: 'bar',
+      data: { labels: d.facilities.labels, datasets: [
+        { label: 'PPM compliance %', data: d.facilities.ppm, backgroundColor: colors.blue },
+        { label: 'Functional %', data: d.facilities.functional, backgroundColor: colors.good } ] },
+      options: { indexAxis: 'y', maintainAspectRatio: false,
+                 scales: { x: { min: 0, max: 100, title: { display: true, text: 'Percent' } } } }
+    });
+  }
+})();
+</script>
 {% endblock %}

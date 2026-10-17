@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Reliability - Biomed EMS{% endblock %}
+{% block content %}
+<nav class="mb-2 no-print"><a href="{{ url_for('reports.index') }}">&larr; Reports</a></nav>
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-0">Reliability by equipment type</h1>
+    <div class="text-muted">{{ scope }} &middot; last {{ window }} days to {{ today.strftime('%d %B %Y') }}</div>
+  </div>
+  <button class="btn btn-outline-secondary no-print" onclick="window.print()">Print</button>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-sm align-middle bg-white shadow-sm">
+    <thead class="table-light"><tr><th>Equipment type</th><th class="text-end">Devices</th><th class="text-end">Failures</th>
+      <th class="text-end">Failures per device-year</th><th class="text-end">MTBF (hours)</th><th class="text-end">MTTR (hours)</th><th class="text-end">Availability</th></tr></thead>
+    <tbody>
+      {% for r in rows + [overall] %}
+      <tr class="{{ 'table-light fw-bold' if loop.last }}">
+        <td>{{ r.name }}</td><td class="text-end">{{ r.devices|num }}</td><td class="text-end">{{ r.failures|num }}</td>
+        <td class="text-end">{{ r.failures_per_device_year }}</td><td class="text-end">{{ r.mtbf|num }}</td>
+        <td class="text-end">{{ r.mttr if r.mttr is not none else '-' }}</td><td class="text-end">{{ r.availability|pct }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card"><div class="card-body small text-muted">
+  <strong>Definitions.</strong>
+  <ul class="mb-0">
+    <li><strong>Failure</strong>: a repair (corrective) work order opened in the period. Cancelled jobs are ignored.</li>
+    <li><strong>MTTR</strong> (mean time to repair): average downtime of completed repair jobs.</li>
+    <li><strong>MTBF</strong> (mean time between failures): total operating time divided by the number of failures, where operating time is the hours each active device existed in the period minus its repair downtime.</li>
+    <li><strong>Availability</strong>: operating time as a share of total time.</li>
+    <li>Preventive maintenance downtime is not counted. Devices without a purchase date are assumed to exist for the whole period. Types with no failures show a dash for MTBF.</li>
+  </ul>
+</div></div>
+{% endblock %}

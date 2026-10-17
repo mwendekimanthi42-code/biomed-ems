@@ -13,3 +13,17 @@
   {% set colors = {'low': 'secondary', 'medium': 'primary', 'high': 'warning', 'critical': 'danger'} %}
   <span class="badge text-bg-{{ colors.get(priority, 'secondary') }}">{{ priority|capitalize }}</span>
 {% endmacro %}
+
+{% macro kpi(label, value, sub=None, href=None, tone='') %}
+<div class="col-6 col-md-4 col-xl-2">
+  <div class="card shadow-sm h-100"><div class="card-body">
+    <div class="small text-muted">
+      {% if href %}<a class="stretched-link text-decoration-none text-muted" href="{{ href }}">{{ label }}</a>{% else %}{{ label }}{% endif %}
+    </div>
+    <div class="stat-number {{ tone }}">{{ value }}</div>
+    {% if sub %}<div class="small text-muted">{{ sub }}</div>{% endif %}
+  </div></div>
+</div>
+{% endmacro %}
+
+{% macro health_tone(value) %}{{ '' if value is none else ('kpi-good' if value >= 90 else ('kpi-warn' if value >= 75 else 'kpi-bad')) }}{% endmacro %}

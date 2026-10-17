@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% from "_macros.html" import health_tone %}
+{% block title %}Maintenance audit - Biomed EMS{% endblock %}
+{% block content %}
+<nav class="mb-2 no-print"><a href="{{ url_for('reports.index') }}">&larr; Reports</a></nav>
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-0">Equipment maintenance audit</h1>
+    <div class="text-muted">{{ scope }} &middot; as at {{ today.strftime('%d %B %Y') }}</div>
+  </div>
+  <div class="d-flex gap-2 no-print">
+    <button class="btn btn-outline-secondary" onclick="window.print()">Print</button>
+    <a class="btn btn-primary" href="{{ url_for('reports.audit_csv') }}">Download CSV</a>
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3"><div class="card"><div class="card-body"><div class="small text-muted">Active devices</div><div class="stat-number">{{ totals.active|num }}</div></div></div></div>
+  <div class="col-md-3"><div class="card"><div class="card-body"><div class="small text-muted">Functional</div><div class="stat-number {{ health_tone(totals.functional_pct) }}">{{ totals.functional_pct|pct }}</div></div></div></div>
+  <div class="col-md-3"><div class="card"><div class="card-body"><div class="small text-muted">PPM compliance</div><div class="stat-number {{ health_tone(totals.ppm_pct) }}">{{ totals.ppm_pct|pct }}</div></div></div></div>
+  <div class="col-md-3"><div class="card"><div class="card-body"><div class="small text-muted">Overdue PPM</div><div class="stat-number">{{ totals.ppm_overdue|num }}</div></div></div></div>
+</div>
+
+<div class="table-responsive">
+  <table class="table table-sm align-middle bg-white shadow-sm">
+    <thead class="table-light">
+      <tr><th>Facility</th><th>County</th><th class="text-end">Level</th><th class="text-end">Devices</th>
+          <th class="text-end">Functional</th><th class="text-end">PPM compliance</th><th class="text-end">Overdue PPM</th>
+          <th class="text-end">Open jobs</th><th class="text-end">Repairs (12 mo)</th><th class="text-end">Downtime h</th>
+          <th class="text-end">Repair cost</th><th class="text-end">Avg repair h</th></tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{{ r.name }}</td><td>{{ r.county }}</td><td class="text-end">{{ r.level }}</td>
+        <td class="text-end">{{ r.devices|num }}</td>
+        <td class="text-end {{ health_tone(r.functional_pct) }}">{{ r.functional_pct|pct }}</td>
+        <td class="text-end {{ health_tone(r.ppm_pct) }}">{{ r.ppm_pct|pct }}</td>
+        <td class="text-end">{{ r.ppm_overdue|num }}</td><td class="text-end">{{ r.open_jobs|num }}</td>
+        <td class="text-end">{{ r.repairs|num }}</td><td class="text-end">{{ r.downtime|num }}</td>
+        <td class="text-end">{{ r.cost|ksh }}</td><td class="text-end">{{ r.mttr if r.mttr is not none else '-' }}</td>
+      </tr>
+      {% else %}<tr><td colspan="12" class="text-center text-muted py-3">No facilities in scope.</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<div class="card"><div class="card-body small text-muted">
+  <strong>How to read this report.</strong>
+  <ul class="mb-0">
+    <li><strong>Functional</strong>: share of active (not decommissioned) devices whose status is Functional.</li>
+    <li><strong>PPM compliance</strong>: share of devices with a maintenance schedule whose next due date has not passed.</li>
+    <li><strong>Repairs, downtime, cost, and average repair time</strong> cover completed repair jobs closed in the last 12 months.</li>
+    <li>Figures reflect the records entered in this system, so they are only as complete as the data entry. Green is 90% or more, amber 75-90%, red below 75%.</li>
+  </ul>
+</div></div>
+{% endblock %}

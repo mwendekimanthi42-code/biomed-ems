@@ -11,3 +11,13 @@ def ksh(value):
 def label(value):
     """'partially_functional' -> 'Partially functional'."""
     return str(value).replace("_", " ").capitalize() if value else "-"
+
+
+def pct(value):
+    """83.456 -> '83.5%'; missing values show as a dash."""
+    return "-" if value is None else f"{value:.1f}%"
+
+
+def num(value):
+    """12345.6 -> '12,346'."""
+    return "-" if value is None else f"{value:,.0f}"

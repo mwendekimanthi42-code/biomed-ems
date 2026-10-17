@@ -16,6 +16,9 @@
         <a class="nav-link text-white" href="{{ url_for('main.dashboard') }}">Dashboard</a>
         <a class="nav-link text-white" href="{{ url_for('equipment.index') }}">Equipment</a>
         <a class="nav-link text-white" href="{{ url_for('workorders.index') }}">Work orders</a>
+        {% if g.user.role in ['system_admin', 'county_officer', 'facility_engineer'] %}
+        <a class="nav-link text-white" href="{{ url_for('reports.index') }}">Reports</a>
+        {% endif %}
       </div>
       <div class="d-flex align-items-center gap-3 text-white">
         <span>{{ g.user.full_name }}
@@ -38,5 +41,6 @@
     {% endwith %}
     {% block content %}{% endblock %}
   </main>
+  {% block scripts %}{% endblock %}
 </body>
 </html>
