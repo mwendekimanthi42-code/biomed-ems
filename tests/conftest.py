@@ -31,12 +31,16 @@ def app(tmp_path):
         conn.execute("INSERT INTO equipment (asset_tag, facility_id, department_id, type_id) "
                      "VALUES (?, ?, ?, 1)", (f"T{i}", fid, fid))
 
+    conn.execute("UPDATE equipment SET status = 'non_functional' WHERE asset_tag = 'T6'")
     pw = generate_password_hash(PASSWORD)
     users = [
         (1, "Admin", "admin@test.com", "system_admin", None, None, 1),
         (2, "Officer", "officer@test.com", "county_officer", None, "Nairobi", 1),
         (3, "Engineer A", "engineer@test.com", "facility_engineer", 1, None, 1),
         (4, "Inactive", "inactive@test.com", "technician", 1, None, 0),
+        (5, "Reporter A", "reporter@test.com", "reporter", 1, None, 1),
+        (6, "Tech A", "tech@test.com", "technician", 1, None, 1),
+        (7, "Tech C", "techc@test.com", "technician", 3, None, 1),
     ]
     for uid, name, email, role, fid, county, active in users:
         conn.execute("INSERT INTO users (id, full_name, email, password_hash, role, facility_id, "

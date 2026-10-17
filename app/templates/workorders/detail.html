@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, wo_status_badge, priority_badge %}
+{% block title %}Work order #{{ wo.id }} - Biomed EMS{% endblock %}
+{% block content %}
+<nav class="mb-2"><a href="{{ url_for('workorders.index') }}">&larr; All work orders</a></nav>
+
+<div class="mb-3">
+  <h1 class="h3 mb-1">Work order #{{ wo.id }}
+    <small class="text-muted">{{ 'Preventive maintenance' if wo.wo_type == 'ppm' else 'Repair' }}</small></h1>
+  {{ wo_status_badge(wo.status) }} {{ priority_badge(wo.priority) }}
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <h2 class="h6 text-uppercase text-muted">Job</h2>
+      <p class="fs-5">{{ wo.description }}</p>
+      <table class="table table-sm mb-0">
+        <tr><th class="w-50">Device</th><td><a href="{{ url_for('equipment.detail', equipment_id=wo.equipment_id) }}">{{ wo.asset_tag }}</a> ({{ wo.type_name }}) {{ status_badge(wo.equipment_status) }}</td></tr>
+        <tr><th>Facility</th><td>{{ wo.facility_name }}</td></tr>
+        <tr><th>Reported by</th><td>{{ wo.reported_by_name }}</td></tr>
+        <tr><th>Opened</th><td>{{ wo.opened_at }} UTC</td></tr>
+        <tr><th>Assigned to</th><td>{{ wo.assigned_to_name or 'Nobody yet' }}</td></tr>
+        <tr><th>Started</th><td>{{ wo.started_at or '-' }}</td></tr>
+        <tr><th>Closed</th><td>{{ wo.closed_at or '-' }}</td></tr>
+        {% if wo.status == 'completed' %}
+        <tr><th>Downtime</th><td>{{ wo.downtime_hours }} h</td></tr>
+        <tr><th>Cost</th><td>{{ wo.cost|ksh }}</td></tr>
+        <tr><th>Resolution</th><td>{{ wo.resolution_notes or '-' }}</td></tr>
+        {% endif %}
+      </table>
+    </div></div>
+  </div>
+
+  <div class="col-lg-5">
+    {% if active and can_manage %}
+    <div class="card shadow-sm mb-3"><div class="card-body">
+      <h2 class="h6 text-uppercase text-muted">Assign</h2>
+      <form method="post" action="{{ url_for('workorders.assign', wo_id=wo.id) }}" class="d-flex gap-2">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <select class="form-select" name="technician_id" required>
+          <option value="">Choose technician...</option>
+          {% for t in technicians %}<option value="{{ t.id }}" {{ 'selected' if t.id == wo.assigned_to }}>{{ t.full_name }}</option>{% endfor %}
+        </select>
+        <button class="btn btn-outline-primary" type="submit">Assign</button>
+      </form>
+    </div></div>
+    {% endif %}
+
+    {% if active and can_work %}
+    <div class="card shadow-sm mb-3"><div class="card-body">
+      <h2 class="h6 text-uppercase text-muted">Work on this job</h2>
+      {% if wo.status == 'open' %}
+      <form method="post" action="{{ url_for('workorders.start', wo_id=wo.id) }}" class="mb-3">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button class="btn btn-info w-100" type="submit">Start work</button>
+      </form>
+      {% endif %}
+      <form method="post" action="{{ url_for('workorders.complete', wo_id=wo.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="mb-2">
+          <label class="form-label" for="resolution_notes">What was done? *</label>
+          <textarea class="form-control" id="resolution_notes" name="resolution_notes" rows="3" maxlength="1000" required>{{ form.get('resolution_notes') or '' }}</textarea>
+        </div>
+        <div class="row g-2 mb-2">
+          <div class="col-6">
+            <label class="form-label" for="downtime_hours">Downtime (hours) *</label>
+            <input class="form-control" id="downtime_hours" name="downtime_hours" inputmode="decimal" required value="{{ form.get('downtime_hours') }}">
+          </div>
+          <div class="col-6">
+            <label class="form-label" for="cost">Cost (KSh)</label>
+            <input class="form-control" id="cost" name="cost" inputmode="decimal" value="{{ form.get('cost') }}">
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label" for="device_status">Device condition after the job</label>
+          <select class="form-select" id="device_status" name="device_status">
+            <option value="unchanged" {{ 'selected' if form.get('device_status') == 'unchanged' }}>Leave unchanged</option>
+            <option value="functional" {{ 'selected' if form.get('device_status') == 'functional' }}>Functional</option>
+            <option value="partially_functional" {{ 'selected' if form.get('device_status') == 'partially_functional' }}>Partially functional</option>
+            <option value="non_functional" {{ 'selected' if form.get('device_status') == 'non_functional' }}>Non-functional</option>
+          </select>
+        </div>
+        <button class="btn btn-success w-100" type="submit">Complete work order</button>
+        {% if wo.wo_type == 'ppm' %}<div class="form-text">Completing a PPM job moves the device's next due date forward by {{ wo.ppm_interval_days }} days.</div>{% endif %}
+      </form>
+    </div></div>
+    {% endif %}
+
+    {% if active and can_manage %}
+    <form method="post" action="{{ url_for('workorders.cancel', wo_id=wo.id) }}" onsubmit="return confirm('Cancel this work order?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-outline-danger w-100" type="submit">Cancel work order</button>
+    </form>
+    {% endif %}
+
+    {% if active and not can_work and not can_manage %}
+    <div class="alert alert-secondary">This job is {{ wo.status|replace('_', ' ') }}. Only the assigned technician or an engineer can update it.</div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

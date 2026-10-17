@@ -4,7 +4,7 @@ from pathlib import Path
 
 from flask import Flask, render_template
 
-from . import auth, db, main
+from . import auth, db, equipment, formatting, main, workorders
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -25,6 +25,11 @@ def create_app(test_config=None):
     db.init_app(app)
     app.register_blueprint(auth.bp)
     app.register_blueprint(main.bp)
+    app.register_blueprint(equipment.bp)
+    app.register_blueprint(workorders.bp)
+
+    app.add_template_filter(formatting.ksh, "ksh")
+    app.add_template_filter(formatting.label, "label")
 
     # Make csrf_token() available in every template.
     app.context_processor(lambda: {"csrf_token": auth.csrf_token})

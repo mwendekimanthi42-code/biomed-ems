@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge %}
+{% block title %}Equipment - Biomed EMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0">Equipment</h1>
+  {% if can_edit %}<a class="btn btn-primary" href="{{ url_for('equipment.new') }}">+ Add equipment</a>{% endif %}
+</div>
+
+<form method="get" class="card card-body shadow-sm mb-3">
+  <div class="row g-2">
+    <div class="col-md-4">
+      <input class="form-control" type="search" name="q" value="{{ f.q }}"
+             placeholder="Search tag, make, model, serial, type">
+    </div>
+    {% if facilities|length > 1 %}
+    <div class="col-md-4">
+      <select class="form-select" name="facility">
+        <option value="">All facilities</option>
+        {% for fac in facilities %}
+        <option value="{{ fac.id }}" {{ 'selected' if f.facility == fac.id }}>{{ fac.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div class="col-md-4">
+      <select class="form-select" name="department">
+        <option value="">All departments</option>
+        {% for d in department_names %}
+        <option {{ 'selected' if f.department == d.name }}>{{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <select class="form-select" name="type">
+        <option value="">All types</option>
+        {% for t in types %}
+        <option value="{{ t.id }}" {{ 'selected' if f.type == t.id }}>{{ t.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <select class="form-select" name="status">
+        <option value="">Any status</option>
+        {% for s in statuses %}
+        <option value="{{ s }}" {{ 'selected' if f.status == s }}>{{ s|label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <select class="form-select" name="sort">
+        <option value="tag" {{ 'selected' if f.sort == 'tag' }}>Sort: asset tag</option>
+        <option value="type" {{ 'selected' if f.sort == 'type' }}>Sort: type</option>
+        <option value="facility" {{ 'selected' if f.sort == 'facility' }}>Sort: facility</option>
+        <option value="oldest" {{ 'selected' if f.sort == 'oldest' }}>Sort: oldest first</option>
+        <option value="status" {{ 'selected' if f.sort == 'status' }}>Sort: status</option>
+      </select>
+    </div>
+    <div class="col-12 d-flex flex-wrap align-items-center gap-3">
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="overdue" value="1" id="overdue" {{ 'checked' if f.overdue }}>
+        <label class="form-check-label" for="overdue">PPM overdue</label>
+      </div>
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="eol" value="1" id="eol" {{ 'checked' if f.eol }}>
+        <label class="form-check-label" for="eol">Past expected life</label>
+      </div>
+      <button class="btn btn-primary btn-sm ms-auto" type="submit">Apply</button>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('equipment.index') }}">Clear</a>
+    </div>
+  </div>
+</form>
+
+<p class="text-muted">
+  {% if total %}Showing {{ first }}-{{ last }} of {{ "{:,}".format(total) }} devices{% else %}No devices match your filters{% endif %}
+</p>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle bg-white shadow-sm">
+    <thead class="table-light">
+      <tr>
+        <th>Asset tag</th><th>Type</th><th>Make / model</th><th>Facility</th>
+        <th>Department</th><th>Age</th><th>Status</th><th>Flags</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in items %}
+      <tr>
+        <td><a href="{{ url_for('equipment.detail', equipment_id=it.id) }}">{{ it.asset_tag }}</a></td>
+        <td>{{ it.type_name }}</td>
+        <td>{{ it.make or '-' }} {{ it.model or '' }}</td>
+        <td>{{ it.facility_name }}</td>
+        <td>{{ it.department_name }}</td>
+        <td>{% if it.age_years is not none %}{{ it.age_years }} y{% else %}-{% endif %}</td>
+        <td>{{ status_badge(it.status) }}</td>
+        <td>
+          {% if it.ppm_overdue %}<span class="badge text-bg-danger">PPM overdue</span>{% endif %}
+          {% if it.past_eol %}<span class="badge text-bg-warning">Past expected life</span>{% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="text-center text-muted py-4">Nothing to show.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if pages > 1 %}
+<nav aria-label="Pages">
+  <ul class="pagination justify-content-center">
+    <li class="page-item {{ 'disabled' if page <= 1 }}">
+      <a class="page-link" href="{{ url_for('equipment.index', **dict(request.args.to_dict(), page=page - 1)) }}">Previous</a>
+    </li>
+    <li class="page-item disabled"><span class="page-link">Page {{ page }} of {{ pages }}</span></li>
+    <li class="page-item {{ 'disabled' if page >= pages }}">
+      <a class="page-link" href="{{ url_for('equipment.index', **dict(request.args.to_dict(), page=page + 1)) }}">Next</a>
+    </li>
+  </ul>
+</nav>
+{% endif %}
+{% endblock %}

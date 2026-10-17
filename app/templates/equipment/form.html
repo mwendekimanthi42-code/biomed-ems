@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Add equipment' if mode == 'new' else 'Edit ' ~ item.asset_tag }} - Biomed EMS{% endblock %}
+{% block content %}
+<nav class="mb-2">
+  <a href="{{ url_for('equipment.index') if mode == 'new' else url_for('equipment.detail', equipment_id=item.id) }}">&larr; Cancel</a>
+</nav>
+<h1 class="h3 mb-3">{{ 'Add equipment' if mode == 'new' else 'Edit ' ~ item.asset_tag }}</h1>
+
+<form method="post" class="card card-body shadow-sm">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="row g-3">
+    <div class="col-md-4">
+      <label class="form-label" for="asset_tag">Asset tag *</label>
+      <input class="form-control" id="asset_tag" name="asset_tag" maxlength="40" required value="{{ form.get('asset_tag') or '' }}">
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="type_id">Equipment type *</label>
+      <select class="form-select" id="type_id" name="type_id" required>
+        <option value="">Choose...</option>
+        {% for t in types %}
+        <option value="{{ t.id }}" {{ 'selected' if form.get('type_id')|string == t.id|string }}>{{ t.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4">
+      <label class="form-label" for="department_id">Facility and department *</label>
+      <select class="form-select" id="department_id" name="department_id" required>
+        <option value="">Choose...</option>
+        {% for d in departments %}
+        <option value="{{ d.id }}" {{ 'selected' if form.get('department_id')|string == d.id|string }}>{{ d.facility_name }} - {{ d.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label" for="make">Make</label>
+      <input class="form-control" id="make" name="make" value="{{ form.get('make') or '' }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="model">Model</label>
+      <input class="form-control" id="model" name="model" value="{{ form.get('model') or '' }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="serial_number">Serial number</label>
+      <input class="form-control" id="serial_number" name="serial_number" value="{{ form.get('serial_number') or '' }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="supplier">Supplier</label>
+      <input class="form-control" id="supplier" name="supplier" value="{{ form.get('supplier') or '' }}">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label" for="purchase_date">Purchase date</label>
+      <input class="form-control" id="purchase_date" name="purchase_date" type="date" value="{{ form.get('purchase_date') or '' }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="purchase_cost">Purchase cost (KSh)</label>
+      <input class="form-control" id="purchase_cost" name="purchase_cost" inputmode="decimal" value="{{ form.get('purchase_cost') if form.get('purchase_cost') is not none else '' }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="warranty_expiry">Warranty expiry</label>
+      <input class="form-control" id="warranty_expiry" name="warranty_expiry" type="date" value="{{ form.get('warranty_expiry') or '' }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label" for="status">Status *</label>
+      <select class="form-select" id="status" name="status">
+        {% for s in statuses %}
+        <option value="{{ s }}" {{ 'selected' if form.get('status') == s }}>{{ s|label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  <div class="mt-4">
+    <button class="btn btn-primary" type="submit">{{ 'Register device' if mode == 'new' else 'Save changes' }}</button>
+  </div>
+  {% if mode == 'new' %}
+  <p class="text-muted small mt-3 mb-0">A preventive maintenance schedule is created automatically from the equipment type.
+  Devices are never deleted: set the status to Decommissioned to retire one and keep its history.</p>
+  {% endif %}
+</form>
+{% endblock %}

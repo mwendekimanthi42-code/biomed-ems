@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% from "_macros.html" import wo_status_badge, priority_badge %}
+{% block title %}Work orders - Biomed EMS{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <h1 class="h3 mb-0">Work orders</h1>
+  <div class="d-flex gap-2">
+    {% if can_manage %}
+    <form method="post" action="{{ url_for('workorders.generate_ppm') }}" class="m-0">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button class="btn btn-outline-primary" type="submit">Generate due PPM jobs</button>
+    </form>
+    {% endif %}
+    {% if can_report %}<a class="btn btn-danger" href="{{ url_for('workorders.new') }}">+ Report fault</a>{% endif %}
+  </div>
+</div>
+
+<div class="d-flex flex-wrap gap-2 mb-3">
+  <a class="btn btn-sm {{ 'btn-dark' if f.status == '' else 'btn-outline-dark' }}" href="{{ url_for('workorders.index') }}">All</a>
+  <a class="btn btn-sm {{ 'btn-primary' if f.status == 'open' else 'btn-outline-primary' }}" href="{{ url_for('workorders.index', status='open') }}">Open ({{ counts.get('open', 0) }})</a>
+  <a class="btn btn-sm {{ 'btn-info' if f.status == 'in_progress' else 'btn-outline-info' }}" href="{{ url_for('workorders.index', status='in_progress') }}">In progress ({{ counts.get('in_progress', 0) }})</a>
+  <a class="btn btn-sm {{ 'btn-success' if f.status == 'completed' else 'btn-outline-success' }}" href="{{ url_for('workorders.index', status='completed') }}">Completed ({{ "{:,}".format(counts.get('completed', 0)) }})</a>
+  <a class="btn btn-sm {{ 'btn-secondary' if f.status == 'cancelled' else 'btn-outline-secondary' }}" href="{{ url_for('workorders.index', status='cancelled') }}">Cancelled ({{ counts.get('cancelled', 0) }})</a>
+</div>
+
+<form method="get" class="card card-body shadow-sm mb-3">
+  <div class="row g-2">
+    <div class="col-md-4">
+      <input class="form-control" type="search" name="q" value="{{ f.q }}" placeholder="Search asset tag or description">
+    </div>
+    {% if facilities|length > 1 %}
+    <div class="col-md-4">
+      <select class="form-select" name="facility">
+        <option value="">All facilities</option>
+        {% for fac in facilities %}<option value="{{ fac.id }}" {{ 'selected' if f.facility == fac.id }}>{{ fac.name }}</option>{% endfor %}
+      </select>
+    </div>
+    {% endif %}
+    <div class="col-md-2">
+      <select class="form-select" name="type">
+        <option value="">Any type</option>
+        <option value="corrective" {{ 'selected' if f.type == 'corrective' }}>Repairs</option>
+        <option value="ppm" {{ 'selected' if f.type == 'ppm' }}>PPM</option>
+      </select>
+    </div>
+    <div class="col-md-2">
+      <select class="form-select" name="priority">
+        <option value="">Any priority</option>
+        {% for p in priorities %}<option value="{{ p }}" {{ 'selected' if f.priority == p }}>{{ p|capitalize }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-12 d-flex align-items-center gap-3">
+      <input type="hidden" name="status" value="{{ f.status }}">
+      {% if can_have_jobs %}
+      <div class="form-check">
+        <input class="form-check-input" type="checkbox" name="mine" value="1" id="mine" {{ 'checked' if f.mine }}>
+        <label class="form-check-label" for="mine">Assigned to me</label>
+      </div>
+      {% endif %}
+      <button class="btn btn-primary btn-sm ms-auto" type="submit">Apply</button>
+      <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('workorders.index') }}">Clear</a>
+    </div>
+  </div>
+</form>
+
+<p class="text-muted">{% if total %}Showing {{ first }}-{{ last }} of {{ "{:,}".format(total) }} work orders{% else %}No work orders match your filters{% endif %}</p>
+
+<div class="table-responsive">
+  <table class="table table-hover align-middle bg-white shadow-sm">
+    <thead class="table-light">
+      <tr><th>#</th><th>Opened</th><th>Device</th><th>Facility</th><th>Type</th><th>Priority</th><th>Status</th><th>Assigned to</th><th>Description</th></tr>
+    </thead>
+    <tbody>
+      {% for w in items %}
+      <tr>
+        <td><a href="{{ url_for('workorders.detail', wo_id=w.id) }}">#{{ w.id }}</a></td>
+        <td>{{ w.opened_at[:10] }}</td>
+        <td>{{ w.asset_tag }}</td>
+        <td>{{ w.facility_name }}</td>
+        <td>{{ 'PPM' if w.wo_type == 'ppm' else 'Repair' }}</td>
+        <td>{{ priority_badge(w.priority) }}</td>
+        <td>{{ wo_status_badge(w.status) }}</td>
+        <td>{{ w.assigned_to_name or '-' }}</td>
+        <td>{{ w.description[:60] }}{{ '...' if w.description|length > 60 }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="9" class="text-center text-muted py-4">Nothing to show.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% if pages > 1 %}
+<nav aria-label="Pages"><ul class="pagination justify-content-center">
+  <li class="page-item {{ 'disabled' if page <= 1 }}"><a class="page-link" href="{{ url_for('workorders.index', **dict(request.args.to_dict(), page=page - 1)) }}">Previous</a></li>
+  <li class="page-item disabled"><span class="page-link">Page {{ page }} of {{ pages }}</span></li>
+  <li class="page-item {{ 'disabled' if page >= pages }}"><a class="page-link" href="{{ url_for('workorders.index', **dict(request.args.to_dict(), page=page + 1)) }}">Next</a></li>
+</ul></nav>
+{% endif %}
+{% endblock %}

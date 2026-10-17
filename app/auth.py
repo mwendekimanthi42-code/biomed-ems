@@ -7,6 +7,7 @@ from flask import (Blueprint, abort, flash, g, redirect, render_template,
                    request, session, url_for)
 from werkzeug.security import check_password_hash, generate_password_hash
 
+from . import audit as audit_log
 from .db import get_db
 
 bp = Blueprint("auth", __name__)
@@ -88,11 +89,7 @@ def safe_next(target):
 
 
 def audit(db, user_id, action, record_id, details):
-    db.execute(
-        "INSERT INTO audit_log (user_id, action, table_name, record_id, details) "
-        "VALUES (?, ?, 'users', ?, ?)",
-        (user_id, action, record_id, details),
-    )
+    audit_log.log(db, user_id, action, "users", record_id, details)
 
 
 # --- Routes -----------------------------------------------------------------

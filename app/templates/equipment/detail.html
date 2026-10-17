@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge %}
+{% block title %}{{ item.asset_tag }} - Biomed EMS{% endblock %}
+{% block content %}
+<nav class="mb-2"><a href="{{ url_for('equipment.index') }}">&larr; All equipment</a></nav>
+
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-1">{{ item.asset_tag }} <small class="text-muted">{{ item.type_name }}</small></h1>
+    {{ status_badge(item.status) }}
+    {% if item.ppm_overdue %}<span class="badge text-bg-danger">PPM overdue</span>{% endif %}
+    {% if item.past_eol %}<span class="badge text-bg-warning">Past expected life</span>{% endif %}
+  </div>
+  <div class="d-flex gap-2">
+    {% if item.status != 'decommissioned' and g.user.role in ['system_admin', 'facility_engineer', 'technician', 'reporter'] %}
+    <a class="btn btn-danger" href="{{ url_for('workorders.new', equipment_id=item.id) }}">Report fault</a>
+    {% endif %}
+    {% if can_edit %}
+    <a class="btn btn-outline-primary" href="{{ url_for('equipment.edit', equipment_id=item.id) }}">Edit</a>
+    {% endif %}
+  </div>
+</div>
+
+{% if repair_ratio >= review_ratio %}
+<div class="alert alert-warning">
+  <strong>Review for replacement.</strong> Repairs have cost {{ stats.repair_cost|ksh }},
+  which is {{ (repair_ratio * 100)|round|int }}% of the estimated replacement cost
+  ({{ item.est_replacement_cost|ksh }}).
+</div>
+{% endif %}
+
+<div class="row g-3">
+  <div class="col-lg-6">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <h2 class="h6 text-uppercase text-muted">Details</h2>
+      <table class="table table-sm mb-0">
+        <tr><th class="w-50">Facility</th><td>{{ item.facility_name }}</td></tr>
+        <tr><th>Department</th><td>{{ item.department_name }}</td></tr>
+        <tr><th>Make / model</th><td>{{ item.make or '-' }} {{ item.model or '' }}</td></tr>
+        <tr><th>Serial number</th><td>{{ item.serial_number or '-' }}</td></tr>
+        <tr><th>Supplier</th><td>{{ item.supplier or '-' }}</td></tr>
+        <tr><th>Purchase date</th><td>{{ item.purchase_date or '-' }}</td></tr>
+        <tr><th>Purchase cost</th><td>{{ item.purchase_cost|ksh }}</td></tr>
+        <tr><th>Warranty expiry</th><td>{{ item.warranty_expiry or '-' }}{% if warranty %} <span class="text-muted">({{ warranty }})</span>{% endif %}</td></tr>
+        <tr><th>Risk score</th><td>{{ item.risk_score }} of 5</td></tr>
+      </table>
+    </div></div>
+  </div>
+
+  <div class="col-lg-6">
+    <div class="card shadow-sm mb-3"><div class="card-body">
+      <h2 class="h6 text-uppercase text-muted">Lifecycle</h2>
+      {% if item.age_years is not none %}
+      <p class="mb-1">{{ item.age_years }} years old, expected life {{ item.expected_life_years }} years</p>
+      <div class="progress mb-2" role="progressbar" aria-label="Share of expected life used">
+        <div class="progress-bar {{ 'bg-warning' if life_used >= 100 else '' }}" style="width: {{ life_used }}%">{{ life_used }}%</div>
+      </div>
+      {% else %}
+      <p class="mb-1 text-muted">No purchase date recorded.</p>
+      {% endif %}
+      <p class="mb-0">Estimated replacement cost: <strong>{{ item.est_replacement_cost|ksh }}</strong></p>
+    </div></div>
+
+    <div class="card shadow-sm"><div class="card-body">
+      <h2 class="h6 text-uppercase text-muted">Preventive maintenance</h2>
+      {% if item.next_due_date %}
+      <table class="table table-sm mb-0">
+        <tr><th class="w-50">Interval</th><td>every {{ item.ppm_interval_days }} days</td></tr>
+        <tr><th>Last done</th><td>{{ item.last_done_date or 'not yet recorded' }}</td></tr>
+        <tr><th>Next due</th><td>{{ item.next_due_date }}{% if item.ppm_overdue %} <span class="badge text-bg-danger">overdue</span>{% endif %}</td></tr>
+      </table>
+      {% else %}
+      <p class="mb-0 text-muted">No maintenance schedule (device decommissioned).</p>
+      {% endif %}
+    </div></div>
+  </div>
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-md-3"><div class="card shadow-sm"><div class="card-body"><div class="text-muted">Work orders</div><div class="stat-number">{{ stats.jobs }}</div></div></div></div>
+  <div class="col-md-3"><div class="card shadow-sm"><div class="card-body"><div class="text-muted">Repairs</div><div class="stat-number">{{ stats.corrective_jobs }}</div></div></div></div>
+  <div class="col-md-3"><div class="card shadow-sm"><div class="card-body"><div class="text-muted">Total downtime</div><div class="stat-number">{{ "{:,.0f}".format(stats.downtime_hours) }} h</div></div></div></div>
+  <div class="col-md-3"><div class="card shadow-sm"><div class="card-body"><div class="text-muted">Repair spend</div><div class="fs-4 fw-bold">{{ stats.repair_cost|ksh }}</div></div></div></div>
+</div>
+
+<h2 class="h5 mt-4">Work order history</h2>
+<div class="table-responsive">
+  <table class="table table-sm align-middle bg-white shadow-sm">
+    <thead class="table-light">
+      <tr><th>Opened</th><th>Type</th><th>Priority</th><th>Status</th><th>Description</th><th>Assigned to</th><th>Downtime</th><th>Cost</th></tr>
+    </thead>
+    <tbody>
+      {% for w in work_orders %}
+      <tr>
+        <td><a href="{{ url_for('workorders.detail', wo_id=w.id) }}">#{{ w.id }}</a> {{ w.opened_at[:10] }}</td>
+        <td>{{ w.wo_type|upper if w.wo_type == 'ppm' else w.wo_type|capitalize }}</td>
+        <td>{{ w.priority|capitalize }}</td>
+        <td>{{ w.status|label }}</td>
+        <td>{{ w.description }}</td>
+        <td>{{ w.assigned_to_name or '-' }}</td>
+        <td>{{ w.downtime_hours }} h</td>
+        <td>{{ w.cost|ksh }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="8" class="text-center text-muted py-3">No work orders yet.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% if stats.jobs > 30 %}<p class="text-muted small">Showing the 30 most recent work orders.</p>{% endif %}
+{% endblock %}

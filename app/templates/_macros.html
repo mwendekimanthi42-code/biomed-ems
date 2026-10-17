@@ -1,0 +1,15 @@
+{% macro status_badge(status) %}
+  {% set colors = {'functional': 'success', 'partially_functional': 'warning',
+                   'non_functional': 'danger', 'decommissioned': 'secondary'} %}
+  <span class="badge text-bg-{{ colors.get(status, 'secondary') }}">{{ status|label }}</span>
+{% endmacro %}
+
+{% macro wo_status_badge(status) %}
+  {% set colors = {'open': 'primary', 'in_progress': 'info', 'completed': 'success', 'cancelled': 'secondary'} %}
+  <span class="badge text-bg-{{ colors.get(status, 'secondary') }}">{{ status|label }}</span>
+{% endmacro %}
+
+{% macro priority_badge(priority) %}
+  {% set colors = {'low': 'secondary', 'medium': 'primary', 'high': 'warning', 'critical': 'danger'} %}
+  <span class="badge text-bg-{{ colors.get(priority, 'secondary') }}">{{ priority|capitalize }}</span>
+{% endmacro %}

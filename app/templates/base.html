@@ -12,6 +12,11 @@
     <div class="container">
       <a class="navbar-brand" href="{{ url_for('main.dashboard') }}">Biomed EMS</a>
       {% if g.user %}
+      <div class="me-auto ms-3 d-none d-md-flex gap-3">
+        <a class="nav-link text-white" href="{{ url_for('main.dashboard') }}">Dashboard</a>
+        <a class="nav-link text-white" href="{{ url_for('equipment.index') }}">Equipment</a>
+        <a class="nav-link text-white" href="{{ url_for('workorders.index') }}">Work orders</a>
+      </div>
       <div class="d-flex align-items-center gap-3 text-white">
         <span>{{ g.user.full_name }}
           <span class="badge bg-light text-primary">{{ g.user.role.replace('_', ' ') }}</span>

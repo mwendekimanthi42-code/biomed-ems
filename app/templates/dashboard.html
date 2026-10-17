@@ -7,7 +7,7 @@
 <div class="row g-3 mt-1">
   <div class="col-md-4">
     <div class="card shadow-sm"><div class="card-body">
-      <div class="text-muted">Equipment</div>
+      <a class="stretched-link text-decoration-none text-muted" href="{{ url_for('equipment.index') }}">Equipment</a>
       <div class="stat-number">{{ "{:,}".format(equipment) }}</div>
     </div></div>
   </div>
@@ -19,7 +19,7 @@
   </div>
   <div class="col-md-4">
     <div class="card shadow-sm"><div class="card-body">
-      <div class="text-muted">Open work orders</div>
+      <a class="stretched-link text-decoration-none text-muted" href="{{ url_for('workorders.index', status='active') }}">Open work orders</a>
       <div class="stat-number">{{ "{:,}".format(open_jobs) }}</div>
     </div></div>
   </div>

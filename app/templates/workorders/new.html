@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Report a fault - Biomed EMS{% endblock %}
+{% block content %}
+<nav class="mb-2"><a href="{{ url_for('workorders.index') }}">&larr; Work orders</a></nav>
+<h1 class="h3 mb-3">Report a fault</h1>
+
+<form method="post" class="card card-body shadow-sm" style="max-width: 720px">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+  <div class="mb-3">
+    <label class="form-label" for="asset_tag">Device asset tag *</label>
+    <input class="form-control" id="asset_tag" name="asset_tag" required value="{{ form.get('asset_tag') or '' }}"
+           placeholder="e.g. RCRH-VEN-001">
+    <div class="form-text">Find it on the sticker on the device, or open the device in the equipment list and use its Report fault button.</div>
+  </div>
+  <div class="mb-3">
+    <label class="form-label" for="description">What is wrong? *</label>
+    <textarea class="form-control" id="description" name="description" rows="3" maxlength="500" required>{{ form.get('description') or '' }}</textarea>
+  </div>
+  <div class="row g-3">
+    <div class="col-md-6">
+      <label class="form-label" for="priority">Priority</label>
+      <select class="form-select" id="priority" name="priority">
+        {% for p in priorities %}<option value="{{ p }}" {{ 'selected' if form.get('priority') == p }}>{{ p|capitalize }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label" for="condition">Is the device still usable?</label>
+      <select class="form-select" id="condition" name="condition">
+        <option value="" {{ 'selected' if not form.get('condition') }}>Not sure / no change</option>
+        <option value="working" {{ 'selected' if form.get('condition') == 'working' }}>Still working normally</option>
+        <option value="partial" {{ 'selected' if form.get('condition') == 'partial' }}>Partly working</option>
+        <option value="down" {{ 'selected' if form.get('condition') == 'down' }}>Not working at all</option>
+      </select>
+    </div>
+  </div>
+  <div class="mt-4"><button class="btn btn-danger" type="submit">Submit fault report</button></div>
+</form>
+{% endblock %}
