@@ -31,3 +31,9 @@ def dashboard():
     return render_template("dashboard.html", scope=scope_label(g.user), o=overview, facilities=facilities,
                            attention=candidates[:5], urgent=metrics.urgent_jobs(db, g.user),
                            chart_data=chart_data)
+
+
+@bp.route("/healthz")
+def healthz():
+    """Used by hosting platforms to check the app is alive. Needs no login."""
+    return "ok"

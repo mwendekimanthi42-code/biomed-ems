@@ -1,0 +1,21 @@
+# Render "Blueprint": lets you create the service from this file. See docs/DEPLOY.md.
+services:
+  - type: web
+    name: biomed-ems
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # One worker only: the free tier has little memory, and the demo database is built on start-up.
+    startCommand: gunicorn wsgi:app --workers 1 --bind 0.0.0.0:$PORT
+    healthCheckPath: /healthz
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: AUTO_SEED
+        value: "1"
+      - key: DEMO_MODE
+        value: "1"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PYTHON_VERSION          # use a version Render supports; see Render's Python docs
+        value: 3.12.8

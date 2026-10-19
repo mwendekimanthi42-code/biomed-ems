@@ -3,7 +3,7 @@ import functools
 import secrets
 from urllib.parse import urlparse
 
-from flask import (Blueprint, abort, flash, g, redirect, render_template,
+from flask import (Blueprint, abort, current_app, flash, g, redirect, render_template,
                    request, session, url_for)
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -92,6 +92,15 @@ def audit(db, user_id, action, record_id, details):
     audit_log.log(db, user_id, action, "users", record_id, details)
 
 
+def recent_failures(db, email):
+    """How many failed logins this email has had inside the lockout window."""
+    return db.execute(
+        "SELECT COUNT(*) FROM audit_log WHERE action = 'login_failed' AND details = ? "
+        "AND created_at >= datetime('now', ?)",
+        (f"Failed login for {email[:100]}", f"-{current_app.config['LOGIN_WINDOW_MINUTES']} minutes"),
+    ).fetchone()[0]
+
+
 # --- Routes -----------------------------------------------------------------
 @bp.route("/login", methods=("GET", "POST"))
 def login():
@@ -102,6 +111,13 @@ def login():
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         db = get_db()
+        if (current_app.config["LOGIN_LOCKOUT"]
+                and recent_failures(db, email) >= current_app.config["LOGIN_MAX_ATTEMPTS"]):
+            audit(db, None, "login_blocked", None, f"Blocked login for {email[:100]}")
+            db.commit()
+            flash(f"Too many failed attempts. Please wait {current_app.config['LOGIN_WINDOW_MINUTES']} "
+                  "minutes and try again.", "danger")
+            return render_template("login.html"), 429
         user = db.execute(
             "SELECT * FROM users WHERE email = ? AND is_active = 1", (email,)
         ).fetchone()

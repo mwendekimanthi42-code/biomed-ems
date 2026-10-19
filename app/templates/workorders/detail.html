@@ -19,10 +19,10 @@
         <tr><th class="w-50">Device</th><td><a href="{{ url_for('equipment.detail', equipment_id=wo.equipment_id) }}">{{ wo.asset_tag }}</a> ({{ wo.type_name }}) {{ status_badge(wo.equipment_status) }}</td></tr>
         <tr><th>Facility</th><td>{{ wo.facility_name }}</td></tr>
         <tr><th>Reported by</th><td>{{ wo.reported_by_name }}</td></tr>
-        <tr><th>Opened</th><td>{{ wo.opened_at }} UTC</td></tr>
+        <tr><th>Opened</th><td>{{ wo.opened_at|eat_time }}</td></tr>
         <tr><th>Assigned to</th><td>{{ wo.assigned_to_name or 'Nobody yet' }}</td></tr>
-        <tr><th>Started</th><td>{{ wo.started_at or '-' }}</td></tr>
-        <tr><th>Closed</th><td>{{ wo.closed_at or '-' }}</td></tr>
+        <tr><th>Started</th><td>{{ wo.started_at|eat_time }}</td></tr>
+        <tr><th>Closed</th><td>{{ wo.closed_at|eat_time }}</td></tr>
         {% if wo.status == 'completed' %}
         <tr><th>Downtime</th><td>{{ wo.downtime_hours }} h</td></tr>
         <tr><th>Cost</th><td>{{ wo.cost|ksh }}</td></tr>

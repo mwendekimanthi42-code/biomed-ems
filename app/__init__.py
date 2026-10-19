@@ -2,25 +2,36 @@
 import os
 from pathlib import Path
 
-from flask import Flask, render_template
+from flask import Flask, render_template, request
 
 from . import auth, db, equipment, formatting, main, reports, workorders
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+DEV_SECRET = "dev-only-change-me"
 
 
 def create_app(test_config=None):
     app = Flask(__name__)
     app.config.from_mapping(
         # Set a real SECRET_KEY environment variable in any real deployment.
-        SECRET_KEY=os.environ.get("SECRET_KEY", "dev-only-change-me"),
+        APP_ENV=os.environ.get("APP_ENV", "development"),
+        SECRET_KEY=os.environ.get("SECRET_KEY", DEV_SECRET),
         DATABASE=str(BASE_DIR / "biomed.db"),
         # DEMO_MODE shows the demo accounts on the login page. Turn it off for real use.
         DEMO_MODE=os.environ.get("DEMO_MODE", "1") == "1",
         SESSION_COOKIE_SAMESITE="Lax",
+        LOGIN_MAX_ATTEMPTS=5,          # failed logins allowed ...
+        LOGIN_WINDOW_MINUTES=15,       # ... within this many minutes
     )
     if test_config:
         app.config.update(test_config)
+    # Lock accounts after repeated failures, except on the public demo (its passwords are published).
+    app.config.setdefault("LOGIN_LOCKOUT", not app.config["DEMO_MODE"])
+
+    if app.config["APP_ENV"] == "production":
+        if app.config["SECRET_KEY"] == DEV_SECRET:
+            raise RuntimeError("Set a real SECRET_KEY environment variable before running in production.")
+        app.config["SESSION_COOKIE_SECURE"] = True      # cookies only travel over HTTPS
 
     db.init_app(app)
     app.register_blueprint(auth.bp)
@@ -32,10 +43,21 @@ def create_app(test_config=None):
     app.add_template_filter(formatting.ksh, "ksh")
     app.add_template_filter(formatting.label, "label")
     app.add_template_filter(formatting.pct, "pct")
+    app.add_template_filter(formatting.eat_time, "eat_time")
+    app.add_template_filter(formatting.eat_date, "eat_date")
     app.add_template_filter(formatting.num, "num")
 
     # Make csrf_token() available in every template.
     app.context_processor(lambda: {"csrf_token": auth.csrf_token})
+
+    @app.after_request
+    def add_security_headers(response):
+        response.headers.setdefault("X-Content-Type-Options", "nosniff")
+        response.headers.setdefault("X-Frame-Options", "DENY")
+        response.headers.setdefault("Referrer-Policy", "same-origin")
+        if request.endpoint != "static":                # never cache pages that show private data
+            response.headers.setdefault("Cache-Control", "no-store")
+        return response
 
     def show_error(error):
         return render_template("error.html", error=error), error.code

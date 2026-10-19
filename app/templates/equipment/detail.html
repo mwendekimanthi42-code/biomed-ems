@@ -92,7 +92,7 @@
     <tbody>
       {% for w in work_orders %}
       <tr>
-        <td><a href="{{ url_for('workorders.detail', wo_id=w.id) }}">#{{ w.id }}</a> {{ w.opened_at[:10] }}</td>
+        <td><a href="{{ url_for('workorders.detail', wo_id=w.id) }}">#{{ w.id }}</a> {{ w.opened_at|eat_date }}</td>
         <td>{{ w.wo_type|upper if w.wo_type == 'ppm' else w.wo_type|capitalize }}</td>
         <td>{{ w.priority|capitalize }}</td>
         <td>{{ w.status|label }}</td>

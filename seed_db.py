@@ -84,7 +84,8 @@ def random_name():
 
 
 def fmt(dt):
-    return dt.strftime("%Y-%m-%d %H:%M:%S")
+    """Seed times are written as Nairobi working hours; the database stores UTC (3 hours earlier)."""
+    return (dt - timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S")
 
 
 def at(day, hour=None):
@@ -130,7 +131,8 @@ def reset_database():
 # ---------------------------------------------------------------------------
 # Main seeding
 # ---------------------------------------------------------------------------
-def main():
+def main(quiet=False):
+    out = (lambda *args, **kwargs: None) if quiet else print
     reset_database()
     conn = sqlite3.connect(DB_PATH)
     conn.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
@@ -297,15 +299,15 @@ def main():
     conn.commit()
 
     # --- summary -----------------------------------------------------------
-    print("Database seeded successfully.\n")
+    out("Database seeded successfully.\n")
     for table in ("facilities", "departments", "users", "equipment_types", "equipment",
                   "maintenance_schedules", "work_orders", "audit_log"):
         count = cur.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
-        print(f"  {table:<24}{count:>6}")
-    print(f"\nDemo password for every account: {DEMO_PASSWORD}")
-    print("  admin@example.com                 (system admin, sees everything)")
-    print("  officer.nairobi@example.com       (county officer; also officer.machakos / officer.kiambu)")
-    print(f"  {demo_logins[0]}")
+        out(f"  {table:<24}{count:>6}")
+    out(f"\nDemo password for every account: {DEMO_PASSWORD}")
+    out("  admin@example.com                 (system admin, sees everything)")
+    out("  officer.nairobi@example.com       (county officer; also officer.machakos / officer.kiambu)")
+    out(f"  {demo_logins[0]}")
     conn.close()
 
 
